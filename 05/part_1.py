@@ -50,6 +50,9 @@ def line_to_points(line):
 
     raise_bad_line_error(line)
 
+def point_to_key(point):
+    return f"{point['x']},{point['y']}"
+
 ## Input parsing
 
 lines = [
@@ -71,29 +74,24 @@ lines = [
 # we don't want to double-count points with an overlap).
 #
 # This is mainly achieved by tracking previous lines via the previous_vent_points data structure.
-# It's a nested dict, where the root keys are x-coords of previously encountered points,
-# the nested keys are the y-coords, and the values are True/False.
+# It's a dict, where the keys are previously encountered points.
 #
 # For example, if we encounter these points: [1,1], [1,2], [1,3], previous_vent_points looks like
 # this:
 #
 # {
-#   "1": {
-#     "1": False,
-#     "2": False,
-#     "3": False,
-#   }
+#   "1,1": False,
+#   "1,2": False,
+#   "1,3": False,
 # }
 #
 # If later on, the point [1,2] is found to overlap another line, this is tracked with a "True"
 # value:
 #
 # {
-#   "1": {
-#     "1": False,
-#     "2": True,
-#     "3": False,
-#   }
+#   "1,1": False,
+#   "1,2": True,
+#   "1,3": False,
 # }
 #
 # This allows O(1) lookup of whether any point has (a) appeared in a previous line, and (b) has
@@ -109,13 +107,15 @@ for line in lines:
     line_points = line_to_points(line)
 
     for point in line_points:
-        if point['x'] in previous_vent_points and point['y'] in previous_vent_points[point['x']]:
+        key = point_to_key(point)
+
+        if key in previous_vent_points:
             # We know we've seen this point before. Was it already involved in an overlap?
             # If not, this is a new overlapping point, so increment num_overlapping_points.
-            if not previous_vent_points[point['x']][point['y']]:
+            if not previous_vent_points[key]:
                 # Mark the vent point as "used", we already know it's an overlapping point and
                 # we don't count it again in later iterations.
-                previous_vent_points[point['x']][point['y']] = True
+                previous_vent_points[key] = True
                 num_overlapping_points += 1
 
             continue
@@ -123,11 +123,6 @@ for line in lines:
         # This vent point is one we haven't seen before. Track it in previous_vent_points.
         # Initially set the value to False (since the vent point hasn't yet been
         # detected as an overlapping point).
-        try:
-            previous_vent_points[point['x']].update({
-                point['y']: False
-            })
-        except KeyError:
-            previous_vent_points[point['x']] = { point['y']: False }
+        previous_vent_points[key] = False
 
 print(num_overlapping_points)
